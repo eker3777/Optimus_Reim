@@ -1,0 +1,65 @@
+# Local generated pipeline artifacts (keep out of day-to-day git status)
+Data/
+Results/
+Documents/
+Presentation/
+Models/Transformer_xT/
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# IDE/OS files
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs and temp
+*.log
+*.tmp
+*.temp
+
+# TensorBoard and transient training logs
+TensorBoard/
+
+# Local scratch/debug outputs
+Notebooks/torch_debug.ipynb
+Notebooks/phase5_transformer_xG.ipynb
+Notebooks/Legacy/
+Notebooks/Tensorboad.ipynb
+Notebooks/data_prep_consolidated.ipynb
+Notebooks/phase6_gnn_archive.ipynb
+
+# Optional private notes (not required for organizer handoff)
+Chats/
+Other_Data/
+Processed Sequence Data/
+Tensor-Ready Data/Other/
+Models/Transformer_xG/
+
+# Exclude legacy and non-selected model artifacts
+Models/**/*_last.pth
+Models/Optimus_Reim_Legacy/
+
+# Manuscript/presentation scratch files (non-pipeline artifacts)
+Conference Absrtact - Elliott Kervin.docx
+Conference Absrtact - Elliott Kervin.pdf
+GNN Implementation.docx
+HALO Hackathon Final Report - Elliott Kervin.docx
+HALO Hackathon Final Report - Elliott Kervin.txt
+Optimus Reim - ASA Conference Abstract.docx
+Optimus Reim - ASA Conference Abstract.pdf
+Report Outline.docx
+Possession change examples.xlsx
+first_game_events.xlsx
+first_game_events.csv
