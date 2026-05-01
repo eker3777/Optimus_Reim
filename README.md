@@ -1,139 +1,93 @@
 # Optimus Reim: Contextual xT for Hockey Sequence Valuation
 
-This repository contains the primary modeling stack for the HALO project, centered on two complementary objectives:
+Optimus Reim is a sequence-aware hockey valuation framework designed to measure two-way event impact beyond shot-only models.
 
-- **Phase 4**: establish a reliable comparative **xG baseline** with XGBoost.
-- **Phase 6**: build **Optimus Reim**, a sequence-aware Transformer that assigns two-way event-level net impact (`Net_xT_Impact`).
+The project goal is to move from terminal shot quality to continuous possession-state threat accounting over Sportlogiq micro-events.
 
-The technical aim is to move from shot-terminal valuation to continuous sequence valuation using Sportlogiq micro-events.
+## Public Snapshot Scope
 
----
+This repository is a curated public push, not the full private working tree.
 
-## 1) Problem Framing
+- Full public boundaries are defined in `PUBLISH_MANIFEST.md`.
+- The published artifacts are focused on one aligned Phase 6 run.
+- Raw/private/internal folders are intentionally excluded.
 
-Traditional hockey public models are largely built on RTSS-style discrete events and are strongest at shot-level evaluation. They generally miss or under-credit the value of micro-transitions such as:
+## Problem Framing
+
+Traditional public hockey models are strongest at shot-level evaluation. They often under-credit transitional and defensive actions that materially change near-term scoring risk, including:
 
 - passes and receptions,
 - carries and puck protection,
-- loose puck recoveries (LPRs),
-- defensive interruption actions that alter transition risk.
+- loose puck recoveries,
+- interruption events that alter transition danger.
 
-Optimus Reim addresses this gap by modeling **actor-relative near-term threat** over event sequences and attributing probability deltas to the acting player.
+Optimus Reim addresses this by modeling actor-relative sequence state and attributing probability deltas at event level.
 
----
+## Core Definitions
 
-## 2) Core Definitions
+- Expected Threat (xT): probability of a goal within the model horizon conditioned on current sequence state.
+- xT_For_Added: event-level change in the acting team's scoring threat.
+- xT_Against_Added: event-level change in opponent counter-threat.
+- Net_xT_Impact: `xT_For_Added - xT_Against_Added`.
 
-- **Expected Threat (xT)**: probability that a goal occurs within the model horizon, conditioned on current sequence state.
-- **xT_For_Added**: event-level change in the acting team’s scoring threat.
-- **xT_Against_Added**: event-level change in opponent counter-threat (negative is favorable defensive impact).
-- **Net_xT_Impact**: `xT_For_Added - xT_Against_Added` (two-way ledger value per event).
+This is a descriptive accounting framework rather than a pure shot-opportunity metric.
 
-This is a **descriptive accounting framework**, not a pure shot-opportunity metric.
+## Optimus Reim Transformer (published focus)
 
----
-
-## 3) Phase 4: XGBoost Comparative Baseline
-
-Phase 4 provides a practical benchmark for shot quality using binary `target_xg` on shot/deflection events.
-
-### Technical role
-- Establishes reference performance against Sportlogiq shot xG fields.
-- Quantifies incremental value of tracking-derived tabular features.
-- Produces interpretable importance artifacts for model sanity checks.
-
-### Why it stays in the stack
-- Fast to train and compare.
-- Strong baseline for calibration/performance-per-compute.
-- Essential comparator for assessing whether sequence models provide actionable incremental value.
-
-### Artifact locations
-- Models: `Models/XGBoost_xG/`
-- Results: `Results/XGBoost_xG/`
-
----
-
-## 4) Phase 6: Optimus Reim Transformer (Event-Level Net Impact)
-
-Phase 6 models hockey as an ordered event process with actor-relative 3-class outputs:
+Models events as an ordered process with actor-relative three-class outputs:
 
 - `p_actor_goal`
 - `p_opp_goal`
 - `p_no_goal`
 
-Per-event deltas are converted into the xT ledger (`xT_For_Added`, `xT_Against_Added`, `Net_xT_Impact`) for player/team attribution.
+Per-event probability deltas are converted into the xT ledger for player and team attribution.
 
-### 4.1 Input design
-- Event metadata and sequence ordering features.
-- Spatiotemporal geometry (coordinates, distance/angle dynamics, timing gaps, speed context).
-- Game-state context (skaters, score state, net-empty flags).
-- Text-semantic context via cleaned event description embeddings.
+Key implementation choices reflected in this repository:
 
-### 4.2 Sequence modeling choices
-- Causal Transformer with ALiBi-style temporal biasing.
-- Sliding sequence windows (`max_len=128`, `stride=64`).
-- Token-level prediction head for event-wise attribution.
-- 5-fold game-level CV with fold-stable rare-event ranking behavior.
+- causal Transformer with ALiBi-style temporal bias,
+- sliding windows (`max_len=128`, `stride=64`),
+- token-level event attribution,
+- fold-stable game-level cross-validation,
+- sidecar restoration logic for counterpart events,
+- restart handling after stoppages and boundaries.
 
-### 4.3 Paired-event integrity: sidecar protocol
-To avoid sequence hallucinations from dual-actor rows:
+## Key Report Insights
 
-- Keep only primary timeline rows for training/scoring.
-- Move loser/counterpart rows to sidecars (`faceoff_reference_df`, `penaltydrawn_reference_df`) with `kept_sl_event_id` linkage.
-- Restore counterpart rows post-scoring with **inverse credit application**.
-- Preserve provenance through `restored_source` and QC checks on restored event typing.
+- xG vs xT distinction: xG estimates shot quality; xT captures contextual sequence execution.
+- Non-shot value capture: transition-heavy actions can drive substantial aggregate impact.
+- Execution asymmetry: similar tactical states can produce materially different marginal outcomes.
+- Reliability: ranking/calibration behavior is stable enough to indicate transferable sequence structure.
 
-This preserves causal sequence integrity while retaining two-way event accounting.
+## Included Public Artifacts
 
-### 4.4 State reset protocol after stoppages
-Threat carry-over is explicitly controlled with restart logic:
+### Published run paths
 
-- reset if prior event is terminal (`whistle`, `goal`, `period_end`),
-- reset on hard-reset current events (`faceoff`, `period_start`),
-- reset at structural boundaries (new game/sequence transitions).
+- Models: `Models/Transformer_xT/run_20260325_013112/`
+- Results: `Results/Transformer_xT/run_20260325_013112/`
 
-Operationally, the prior aligned state is set to zero when `reset_prior_mask` is true, so post-whistle and faceoff events are evaluated from a clean baseline.
+### Included notebooks
 
-### Artifact locations
-- Best weights: `Models/Transformer_xT/run_20260325_013112/`
-- Outputs: `Results/Transformer_xT/run_20260325_013112/`
+- `Notebooks/phase1_data_cleaning.ipynb`
+- `Notebooks/phase2_tensor_ready.ipynb`
+- `Notebooks/phase3_final_datsets.ipynb`
+- `Notebooks/phase6_inspection_simplified.ipynb`
+- `Notebooks/phase6_modeling_consolidated.ipynb`
+- `Notebooks/simplified_player_goalie_analysis.ipynb`
 
----
+### Included code surface
 
-## 5) Key Technical Insights (from final report)
+- `scripts/data_prep/` for staged pipeline logic,
+- `scripts/train_phase6_transformer.py` and entrypoint wrapper,
+- `scripts/postprocess_phase6_outputs.py` and validation helpers,
+- supporting ridge and GNN experimental scripts kept for scope continuity.
 
-### xG vs xT behavior
-- **xG** is predictive shot-quality estimation.
-- **xT ledger** is contextual, execution-aware accounting over full sequences.
-- This distinction is central: high-impact non-shot actions receive explicit credit in xT but not in shot-only frameworks.
+## Report Links
 
-### Shot execution asymmetry (context-aware)
-- In elevated threat states, shot execution and miss outcomes produce materially different marginal effects.
-- Missed-net outcomes can produce disproportionate transition-risk debits relative to on-net attempts.
+- Local report artifact: `Optimus-Reim-Report.pdf`
+- External report URL: `https://019d40b7-44ff-0a16-e037-1e0bebdc2d87.share.connect.posit.cloud/`
 
-### Possession-transition valuation
-- High-volume transition events (especially LPRs) contribute substantial aggregate net impact.
-- The framework surfaces players whose value is often underrepresented in box-score or shot-attempt-only summaries.
+## Repository Notes
 
-### Reliability characteristics
-- Rare-event setting remains highly imbalanced by nature.
-- Fold-level stability in ranking/calibration metrics supports that the model is learning transferable sequence structure rather than memorizing isolated games.
-
----
-
-## 6) Scope Notes
-
-- Visual leaderboards/figures are intentionally omitted from this README.
-- Forward-looking implementation roadmap is intentionally omitted here.
-- For full narrative, appendix details, and visual sections, see:
-  - `Optimus-Reim-Report.pdf`
-  - External report URL: `https://019d40b7-44ff-0a16-e037-1e0bebdc2d87.share.connect.posit.cloud/`
-
----
-
-## 7) Repository Notes
-
-- Large artifacts are managed with Git LFS (`.gitattributes`).
-- This public snapshot is intentionally curated to include scripts, selected notebooks, and one aligned model/results run.
-- Current publication package and scope boundaries are tracked in `PUBLISH_MANIFEST.md`.
+- Large file handling follows `.gitattributes` policy.
+- Publication boundaries and exclusions are authoritative in `PUBLISH_MANIFEST.md`.
 
